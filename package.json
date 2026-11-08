@@ -1,0 +1,25 @@
+{
+  "name": "payqa",
+  "version": "1.0.0",
+  "description": "AI-powered QA agent for PayPal checkouts. Runs happy-path and chaos tests in the PayPal sandbox, explains failures with AI, and gives a Payment Readiness Score before you go live.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sajithkhan/payqa.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/sajithkhan/payqa/issues"
+  },
+  "homepage": "https://github.com/sajithkhan/payqa#readme",
+  "dependencies": {
+    "dotenv": "^18.0.9",
+    "express": "^5.3.0"
+  }
+}

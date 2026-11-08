@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lanka Crafts – PayQA Demo Store</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; background: #f6f7fb; color: #1d2433; }
+    header { background: #12355b; color: #fff; padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; }
+    header h1 { margin: 0; font-size: 20px; }
+    .badge { font-size: 12px; padding: 4px 10px; border-radius: 999px; background: #ffb020; color: #1d2433; font-weight: 600; }
+    .badge.fixed { background: #34c38f; }
+    main { max-width: 1000px; margin: 24px auto; padding: 0 16px; display: grid; grid-template-columns: 2fr 1fr; gap: 24px; }
+    .products { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 16px; }
+    .card { background: #fff; border-radius: 12px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+    .emoji { font-size: 48px; text-align: center; }
+    .card h3 { font-size: 15px; margin: 8px 0 4px; }
+    .price { font-weight: 700; }
+    .stock { font-size: 12px; color: #6b7280; }
+    button.add { width: 100%; margin-top: 10px; padding: 8px; border: 0; border-radius: 8px; background: #12355b; color: #fff; cursor: pointer; }
+    .cart h2 { margin-top: 0; font-size: 18px; }
+    .line { display: flex; justify-content: space-between; font-size: 14px; margin: 6px 0; }
+    .totals .line.total { font-weight: 700; font-size: 16px; border-top: 1px solid #e5e7eb; padding-top: 8px; }
+    .coupon { display: flex; gap: 8px; margin: 12px 0; }
+    .coupon input { flex: 1; padding: 8px; border: 1px solid #d1d5db; border-radius: 8px; }
+    .coupon button { padding: 8px 12px; border: 0; border-radius: 8px; background: #e5e7eb; cursor: pointer; }
+    .empty { color: #6b7280; font-size: 14px; }
+    #result { margin-top: 12px; padding: 12px; border-radius: 8px; display: none; font-weight: 600; }
+    #result.success { display: block; background: #e7f8f0; color: #137a4f; }
+    #result.error { display: block; background: #fdecec; color: #b42318; }
+    .hint { font-size: 12px; color: #6b7280; }
+    @media (max-width: 760px) { main { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🇱🇰 Lanka Crafts</h1>
+    <span id="mode-badge" class="badge">Loading…</span>
+  </header>
+
+  <main>
+    <section>
+      <div class="products" id="products" data-testid="products"></div>
+    </section>
+
+    <aside class="card cart">
+      <h2>Your cart</h2>
+      <div id="cart-lines" data-testid="cart-lines"><p class="empty">Cart is empty</p></div>
+
+      <div class="coupon">
+        <input id="coupon" data-testid="coupon-input" placeholder="Coupon code (try SAVE10)" />
+        <button id="apply-coupon" data-testid="apply-coupon">Apply</button>
+      </div>
+
+      <div class="totals" id="totals" data-testid="totals"></div>
+
+      <div id="paypal-button-container" data-testid="paypal-button" style="margin-top:12px"></div>
+      <div id="result" data-testid="checkout-result"></div>
+      <p class="hint">Sandbox only. No real money is charged.</p>
+    </aside>
+  </main>
+
+  <script src="/app.js"></script>
+</body>
+</html>
