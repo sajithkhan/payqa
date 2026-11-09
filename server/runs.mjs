@@ -14,7 +14,9 @@ const runs = new Map();
 for (const file of fs.readdirSync(DIR).filter((f) => f.endsWith('.json'))) {
   try {
     const run = JSON.parse(fs.readFileSync(path.join(DIR, file), 'utf8'));
-    if (run.status === 'running') Object.assign(run, { status: 'error', error: 'Engine restarted during the run' });
+    if (run.status === 'running' || run.status === 'analyzing') {
+      Object.assign(run, { status: 'error', error: 'The engine restarted during this run' });
+    }
     runs.set(run.id, run);
   } catch {
     // ignore broken files
@@ -31,7 +33,7 @@ export function createRun(fields) {
 export function updateRun(id, patch) {
   const run = runs.get(id);
   Object.assign(run, patch);
-  if (run.status !== 'running') {
+  if (run.status === 'completed' || run.status === 'error') {
     fs.writeFileSync(path.join(DIR, `${id}.json`), JSON.stringify(run, null, 2));
   }
   return run;
@@ -42,4 +44,4 @@ export const getRun = (id) => runs.get(id);
 export const listRuns = () =>
   [...runs.values()]
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-    .map(({ id, mode, status, createdAt, storeUrl, summary }) => ({ id, mode, status, createdAt, storeUrl, summary }));
+    .map(({ id, mode, status, createdAt, storeUrl, summary, error }) => ({ id, mode, status, createdAt, storeUrl, summary, error }));

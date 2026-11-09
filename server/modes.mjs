@@ -9,7 +9,24 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export const SCREENSHOT_DIR = path.join(__dirname, 'data', 'screenshots');
 export const MODES = ['chaos', 'browser', 'full'];
 
+// Fail fast with a clear message if the store isn't reachable
+export async function checkStore(storeUrl) {
+  try {
+    const res = await fetch(`${storeUrl.replace(/\/$/, '')}/api/products`, { signal: AbortSignal.timeout(5000) });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return { ok: true };
+  } catch (err) {
+    return {
+      ok: false,
+      error: `Can't reach the store at ${storeUrl}. Check it's running and has the PayQA adapter (${err.message}).`,
+    };
+  }
+}
+
 export async function runMode({ mode, storeUrl, runId, headless = true, onUpdate = () => {} }) {
+  const reach = await checkStore(storeUrl);
+  if (!reach.ok) throw new Error(reach.error);
+
   if (mode === 'chaos') return runChaos({ storeUrl, onUpdate });
 
   if (mode === 'browser') {

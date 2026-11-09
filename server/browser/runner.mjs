@@ -48,28 +48,36 @@ export async function runBrowser({
       result.status = 'running';
       onUpdate(results);
 
-      const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
-      if (onContext) await onContext(context);
-      const page = await context.newPage();
       const started = Date.now();
 
-      try {
-        const { checks, evidence } = await SCENARIOS[i].run({ page, store, buyer, runId, screenshotDir });
-        result.checks = checks;
-        result.evidence = evidence;
-        result.status = checks.every((c) => c.passed) ? 'passed' : 'failed';
-      } catch (err) {
-        result.status = 'error';
-        result.error = err.message.split('\n')[0];
-        if (screenshotDir) {
-          const file = `${runId || 'cli'}-${result.id}-error.png`;
-          await page.screenshot({ path: `${screenshotDir}/${file}` }).catch(() => {});
-          result.evidence = { screenshot: file };
+      // The PayPal sandbox is sometimes slow, so a scenario that errors gets one retry
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+        if (onContext) await onContext(context);
+        const page = await context.newPage();
+
+        try {
+          const { checks, evidence } = await SCENARIOS[i].run({ page, store, buyer, runId, screenshotDir });
+          result.checks = checks;
+          result.evidence = evidence;
+          result.status = checks.every((c) => c.passed) ? 'passed' : 'failed';
+          result.attempts = attempt;
+          delete result.error;
+        } catch (err) {
+          result.status = 'error';
+          result.error = err.message.split('\n')[0];
+          result.attempts = attempt;
+          if (screenshotDir) {
+            const file = `${runId || 'cli'}-${result.id}-error.png`;
+            await page.screenshot({ path: `${screenshotDir}/${file}` }).catch(() => {});
+            result.evidence = { screenshot: file };
+          }
         }
+        await context.close();
+        if (result.status !== 'error') break;
       }
 
       result.durationMs = Date.now() - started;
-      await context.close();
       onUpdate(results);
     }
   } finally {

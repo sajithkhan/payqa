@@ -17,7 +17,14 @@ console.log(`\n🛡️  PayQA ${mode} mode → ${storeUrl}\n`);
 
 const ICON = { passed: '✅', failed: '❌', error: '⚠️ ' };
 
-const { results, summary } = await runMode({ mode, storeUrl, headless, runId: `cli-${Date.now().toString(36)}` });
+let outcome;
+try {
+  outcome = await runMode({ mode, storeUrl, headless, runId: `cli-${Date.now().toString(36)}` });
+} catch (err) {
+  console.log(`⚠️  ${err.message}\n`);
+  process.exit(1);
+}
+const { results, summary } = outcome;
 
 for (const r of results) {
   const tag = r.mode ? `[${r.mode}] ` : '';

@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PayQA · Is your PayPal checkout ready to go live?</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 2 4 7v8c0 7.5 5.1 13.4 12 15 6.9-1.6 12-7.5 12-15V7L16 2Z' fill='%2314243b'/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
+        <path d="M16 2 4 7v8c0 7.5 5.1 13.4 12 15 6.9-1.6 12-7.5 12-15V7L16 2Z" fill="currentColor"/>
+        <path d="m10.5 16.2 3.8 3.8 7.4-7.6" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <div>
+        <h1>PayQA</h1>
+        <p class="tagline">Break your PayPal checkout before your customers do</p>
+      </div>
+    </div>
+  </header>
+
+  <form class="controls" id="run-form">
+    <label class="field">
+      <span>Store to test</span>
+      <input id="store-url" type="url" required placeholder="http://localhost:4000" />
+    </label>
+
+    <fieldset class="modes" id="modes">
+      <legend>What to run</legend>
+      <label><input type="radio" name="mode" value="chaos" checked /><span><b>Chaos</b><small>Forced PayPal failures, ~20s</small></span></label>
+      <label><input type="radio" name="mode" value="browser" /><span><b>Browser</b><small>Real customer checkout, ~1 min</small></span></label>
+      <label><input type="radio" name="mode" value="full" /><span><b>Full</b><small>Both</small></span></label>
+    </fieldset>
+
+    <button type="submit" class="run-btn" id="run-btn">Run tests</button>
+  </form>
+  <p class="form-error" id="form-error" role="alert" hidden></p>
+
+  <main class="layout">
+    <section class="results" aria-live="polite">
+      <div id="empty" class="empty">
+        <h2>Test a checkout before it takes real money</h2>
+        <p>PayQA runs your store against the PayPal sandbox and checks what happens when payments go wrong.</p>
+        <dl class="mode-guide">
+          <div><dt>Chaos</dt><dd>Makes PayPal decline cards, refuse transactions and fail mid-capture, then checks your store didn't mark anything as paid.</dd></div>
+          <div><dt>Browser</dt><dd>Opens Chrome, shops like a customer, pays through the real PayPal popup, and compares what they saw with what PayPal charged.</dd></div>
+        </dl>
+        <p class="hint">Pick a mode and press <b>Run tests</b>. The demo store runs at <code>http://localhost:4000</code>.</p>
+      </div>
+
+      <div id="analysis" class="analysis" hidden></div>
+      <div id="scenarios"></div>
+    </section>
+
+    <aside class="receipt-col">
+      <div class="receipt" id="receipt">
+        <div class="receipt-body" id="receipt-body">
+          <p class="r-title">PayQA test receipt</p>
+          <p class="r-muted">Waiting for a run</p>
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <section class="history">
+    <h2>Past runs</h2>
+    <div id="history"><p class="r-muted">No runs yet.</p></div>
+  </section>
+
+  <script src="/app.js"></script>
+</body>
+</html>
