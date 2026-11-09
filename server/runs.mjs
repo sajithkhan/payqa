@@ -14,6 +14,7 @@ const runs = new Map();
 for (const file of fs.readdirSync(DIR).filter((f) => f.endsWith('.json'))) {
   try {
     const run = JSON.parse(fs.readFileSync(path.join(DIR, file), 'utf8'));
+    if (run.status === 'running') Object.assign(run, { status: 'error', error: 'Engine restarted during the run' });
     runs.set(run.id, run);
   } catch {
     // ignore broken files

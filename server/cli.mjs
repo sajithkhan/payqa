@@ -1,19 +1,27 @@
-// Quick way to run Chaos Mode from the terminal:
-//   node server/cli.mjs                       (tests http://localhost:4000)
-//   node server/cli.mjs http://other-store    (tests another store)
+// Run PayQA from the terminal:
+//   node server/cli.mjs                         chaos mode against http://localhost:4000
+//   node server/cli.mjs browser                 browser mode (opens a visible Chrome window)
+//   node server/cli.mjs full                    chaos + browser
+//   node server/cli.mjs browser --headless      browser mode without a visible window
+//   node server/cli.mjs chaos http://my-store   test another store
 
 import 'dotenv/config';
-import { runChaos } from './chaos/runner.mjs';
+import { runMode, MODES } from './modes.mjs';
 
-const storeUrl = process.argv[2] || process.env.STORE_URL || 'http://localhost:4000';
-console.log(`\n🛡️  PayQA Chaos Mode → ${storeUrl}\n`);
+const args = process.argv.slice(2);
+const mode = args.find((a) => MODES.includes(a)) || 'chaos';
+const storeUrl = args.find((a) => a.startsWith('http')) || process.env.STORE_URL || 'http://localhost:4000';
+const headless = args.includes('--headless');
+
+console.log(`\n🛡️  PayQA ${mode} mode → ${storeUrl}\n`);
 
 const ICON = { passed: '✅', failed: '❌', error: '⚠️ ' };
 
-const { results, summary } = await runChaos({ storeUrl });
+const { results, summary } = await runMode({ mode, storeUrl, headless, runId: `cli-${Date.now().toString(36)}` });
 
 for (const r of results) {
-  console.log(`${ICON[r.status]} ${r.title}  (${r.durationMs} ms)`);
+  const tag = r.mode ? `[${r.mode}] ` : '';
+  console.log(`${ICON[r.status]} ${tag}${r.title}  (${r.durationMs} ms)`);
   if (r.error) console.log(`     error: ${r.error}`);
   for (const c of r.checks) {
     if (!c.passed) {
