@@ -50,6 +50,7 @@ export const SCENARIOS = [
       const cartTotal = money(await page.getByTestId('total').textContent());
 
       const { popup, orderId } = await openPayPalPopup(page);
+      ctx.popup = popup; // lets the runner screenshot PayPal's page if a step fails
       await loginToPayPal(popup, buyer.email, buyer.password);
       const popupAmount = await readPopupAmount(popup);
       // start listening before clicking, so a fast close isn't missed
@@ -116,6 +117,7 @@ export const SCENARIOS = [
       const screenshot = await shot(page, ctx, 'coupon-cart');
 
       const { popup, orderId } = await openPayPalPopup(page);
+      ctx.popup = popup; // lets the runner screenshot PayPal's page if a step fails
       const pp = await paypalOrder(orderId);
       const charged = Number(pp?.purchase_units?.[0]?.amount?.value);
       await popup.close().catch(() => {});
@@ -147,6 +149,7 @@ export const SCENARIOS = [
       await addToCart(page, 'p2');
 
       const { popup, orderId } = await openPayPalPopup(page);
+      ctx.popup = popup; // lets the runner screenshot PayPal's page if a step fails
       await popup.waitForLoadState('domcontentloaded').catch(() => {});
       await popup.close();
 

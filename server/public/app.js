@@ -14,7 +14,7 @@ const BUG_NAMES = {
 };
 const MODE_NAMES = { chaos: 'Chaos', browser: 'Browser', full: 'Full' };
 const GROUP_NAMES = { chaos: 'Payment failures (API)', browser: 'Customer journey (browser)' };
-const ICONS = { passed: '✓', failed: '✕', error: '!' };
+const ICONS = { passed: '✓', failed: '✕', error: '!', skipped: '–' };
 
 let currentRunId = null;
 let pollTimer = null;
@@ -46,13 +46,14 @@ function renderReceipt(run) {
   const lines = (run.results || [])
     .map((r) => {
       const key = `${run.id}:${r.mode || ''}:${r.id}`;
-      const done = ['passed', 'failed', 'error'].includes(r.status);
+      const done = ['passed', 'failed', 'error', 'skipped'].includes(r.status);
       const fresh = done && !printed.has(key);
       if (done) printed.add(key);
       const val =
         r.status === 'passed' ? '<span class="val pass">PASS</span>'
         : r.status === 'failed' ? '<span class="val fail">FAIL</span>'
         : r.status === 'error' ? '<span class="val err">ERROR</span>'
+        : r.status === 'skipped' ? '<span class="val skip">SKIP</span>'
         : r.status === 'running' ? '<span class="val wait">testing…</span>'
         : '<span class="val wait">-</span>';
       return `<div class="r-line${fresh ? ' printed' : ''}"><span class="name">${esc(r.title)}</span>${val}</div>`;
@@ -114,7 +115,9 @@ function renderScenario(r, runId) {
   const body =
     r.status === 'error'
       ? `<p class="s-error">This scenario couldn't finish: ${esc(r.error)}</p>`
-      : r.checks.map(renderCheck).join('');
+      : r.status === 'skipped'
+        ? `<p class="s-skip">Skipped: ${esc(r.skipReason)}</p>`
+        : r.checks.map(renderCheck).join('');
 
   return `<details class="scenario" data-key="${esc(key)}"${open}>
     <summary>
@@ -266,10 +269,15 @@ $('run-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   showError('');
   const storeUrl = $('store-url').value.trim();
+  const storeToken = $('store-token').value.trim() || undefined;
   const mode = new FormData(e.target).get('mode');
 
   $('run-btn').disabled = true;
-  const check = await fetch(`/api/store-check?url=${encodeURIComponent(storeUrl)}`).then((r) => r.json());
+  const check = await fetch('/api/store-check', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ storeUrl, storeToken }),
+  }).then((r) => r.json());
   if (!check.ok) {
     showError(check.error);
     $('run-btn').disabled = false;
@@ -279,7 +287,7 @@ $('run-form').addEventListener('submit', async (e) => {
   const res = await fetch('/api/runs', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ mode, storeUrl }),
+    body: JSON.stringify({ mode, storeUrl, storeToken }),
   });
   const data = await res.json();
   if (!res.ok) {

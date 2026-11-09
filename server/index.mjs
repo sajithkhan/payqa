@@ -11,6 +11,7 @@ import { analyzeRun } from './ai/analyze.mjs';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || process.env.PAYQA_PORT || 5000;
 const DEFAULT_STORE_URL = process.env.STORE_URL || 'http://localhost:4000';
+const DEFAULT_STORE_TOKEN = process.env.PAYQA_STORE_TOKEN || undefined;
 // Browser runs are headless by default; set PAYQA_HEADLESS=false to watch them (great for demos)
 const HEADLESS = process.env.PAYQA_HEADLESS !== 'false';
 
@@ -23,14 +24,16 @@ app.get('/api/health', (req, res) => res.json({ ok: true }));
 
 app.get('/api/config', (req, res) => res.json({ defaultStoreUrl: DEFAULT_STORE_URL, modes: MODES }));
 
-app.get('/api/store-check', async (req, res) => {
-  res.json(await checkStore(req.query.url || DEFAULT_STORE_URL));
+// POST so a store token never ends up in a URL or log
+app.post('/api/store-check', async (req, res) => {
+  res.json(await checkStore((req.body?.storeUrl || DEFAULT_STORE_URL).trim(), req.body?.storeToken || DEFAULT_STORE_TOKEN));
 });
 
 // Start a run: { mode: "chaos" | "browser" | "full", storeUrl?: "http://localhost:4000" }
 app.post('/api/runs', (req, res) => {
   const mode = req.body?.mode || 'chaos';
   const storeUrl = (req.body?.storeUrl || DEFAULT_STORE_URL).trim();
+  const storeToken = req.body?.storeToken || DEFAULT_STORE_TOKEN; // used for this run only, never saved
   if (!MODES.includes(mode)) return res.status(400).json({ error: `Unknown mode "${mode}"` });
   if (listRuns().some((r) => r.status === 'running' || r.status === 'analyzing')) {
     return res.status(409).json({ error: 'A test run is already in progress. Wait for it to finish.' });
@@ -39,7 +42,7 @@ app.post('/api/runs', (req, res) => {
   const run = createRun({ mode, storeUrl });
   res.status(202).json({ id: run.id });
 
-  runMode({ mode, storeUrl, runId: run.id, headless: HEADLESS, onUpdate: (results) => updateRun(run.id, { results }) })
+  runMode({ mode, storeUrl, storeToken, runId: run.id, headless: HEADLESS, onUpdate: (results) => updateRun(run.id, { results }) })
     .then(async ({ results, summary }) => {
       updateRun(run.id, { status: 'analyzing', results, summary });
       const analysis = await analyzeRun({ results, summary }).catch((err) => ({ error: err.message }));

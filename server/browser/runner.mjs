@@ -4,18 +4,19 @@
 import fs from 'node:fs';
 import { chromium } from 'playwright';
 import { createStoreClient } from '../lib/storeClient.mjs';
-import { scoreChecks } from '../chaos/runner.mjs';
+import { summarize } from '../chaos/runner.mjs';
 import { SCENARIOS } from './scenarios.mjs';
 
 export async function runBrowser({
   storeUrl,
+  storeToken,
   runId,
   screenshotDir,
   headless = true,
   onUpdate = () => {},
   onContext = null, // optional hook to customise each browser context (used by tests)
 }) {
-  const store = createStoreClient(storeUrl);
+  const store = createStoreClient(storeUrl, { token: storeToken });
   const buyer = {
     email: process.env.SANDBOX_BUYER_EMAIL,
     password: process.env.SANDBOX_BUYER_PASSWORD,
@@ -56,8 +57,9 @@ export async function runBrowser({
         if (onContext) await onContext(context);
         const page = await context.newPage();
 
+        const ctx = { page, store, buyer, runId, screenshotDir, popup: null };
         try {
-          const { checks, evidence } = await SCENARIOS[i].run({ page, store, buyer, runId, screenshotDir });
+          const { checks, evidence } = await SCENARIOS[i].run(ctx);
           result.checks = checks;
           result.evidence = evidence;
           result.status = checks.every((c) => c.passed) ? 'passed' : 'failed';
@@ -69,7 +71,9 @@ export async function runBrowser({
           result.attempts = attempt;
           if (screenshotDir) {
             const file = `${runId || 'cli'}-${result.id}-error.png`;
-            await page.screenshot({ path: `${screenshotDir}/${file}` }).catch(() => {});
+            // screenshot the PayPal popup if it's still open: that's usually where things got stuck
+            const target = ctx.popup && !ctx.popup.isClosed() ? ctx.popup : page;
+            await target.screenshot({ path: `${screenshotDir}/${file}` }).catch(() => {});
             result.evidence = { screenshot: file };
           }
         }
@@ -85,18 +89,5 @@ export async function runBrowser({
     await store.reset().catch(() => {});
   }
 
-  const allChecks = results.flatMap((r) => r.checks);
-  return {
-    results,
-    summary: {
-      scenarios: results.length,
-      passed: results.filter((r) => r.status === 'passed').length,
-      failed: results.filter((r) => r.status === 'failed').length,
-      errors: results.filter((r) => r.status === 'error').length,
-      checksPassed: allChecks.filter((c) => c.passed).length,
-      checksTotal: allChecks.length,
-      bugsFound: [...new Set(allChecks.filter((c) => !c.passed).map((c) => c.bug))],
-      score: scoreChecks(allChecks),
-    },
-  };
+  return { results, summary: summarize(results) };
 }

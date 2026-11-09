@@ -103,7 +103,10 @@ export async function analyzeRun(run) {
 
   let summary;
   if (ready) {
-    summary = `All ${run.summary?.scenarios ?? ''} scenarios passed. The store handled every failure PayQA threw at it without marking unpaid orders as paid or charging the wrong amount.`;
+    const skipped = run.summary?.skipped || 0;
+    summary =
+      `All ${run.summary?.passed ?? ''} scenarios that ran passed. The store handled every failure PayQA threw at it without marking unpaid orders as paid or charging the wrong amount.` +
+      (skipped ? ` ${skipped} scenario${skipped === 1 ? ' was' : 's were'} skipped because the store doesn't support ${skipped === 1 ? 'it' : 'them'}.` : '');
   } else if (issues.length) {
     summary =
       `Found ${issues.length} problem${issues.length === 1 ? '' : 's'}${critical ? `, ${critical} critical` : ''}. ` +

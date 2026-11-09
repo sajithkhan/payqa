@@ -15,11 +15,11 @@ const headless = args.includes('--headless');
 
 console.log(`\n🛡️  PayQA ${mode} mode → ${storeUrl}\n`);
 
-const ICON = { passed: '✅', failed: '❌', error: '⚠️ ' };
+const ICON = { passed: '✅', failed: '❌', error: '⚠️ ', skipped: '⏭️ ' };
 
 let outcome;
 try {
-  outcome = await runMode({ mode, storeUrl, headless, runId: `cli-${Date.now().toString(36)}` });
+  outcome = await runMode({ mode, storeUrl, storeToken: process.env.PAYQA_STORE_TOKEN, headless, runId: `cli-${Date.now().toString(36)}` });
 } catch (err) {
   console.log(`⚠️  ${err.message}\n`);
   process.exit(1);
@@ -30,6 +30,7 @@ for (const r of results) {
   const tag = r.mode ? `[${r.mode}] ` : '';
   console.log(`${ICON[r.status]} ${tag}${r.title}  (${r.durationMs} ms)`);
   if (r.error) console.log(`     error: ${r.error}`);
+  if (r.skipReason) console.log(`     skipped: ${r.skipReason}`);
   for (const c of r.checks) {
     if (!c.passed) {
       console.log(`     ✗ [${c.severity}] ${c.title}`);
@@ -40,7 +41,7 @@ for (const r of results) {
 }
 
 console.log('\n──────────────────────────────');
-console.log(`Scenarios: ${summary.passed} passed, ${summary.failed} failed, ${summary.errors} errors`);
+console.log(`Scenarios: ${summary.passed} passed, ${summary.failed} failed, ${summary.errors} errors${summary.skipped ? `, ${summary.skipped} skipped` : ''}`);
 console.log(`Checks:    ${summary.checksPassed}/${summary.checksTotal} passed`);
 console.log(`Bugs:      ${summary.bugsFound.join(', ') || 'none'}`);
 console.log(`Payment Readiness Score: ${summary.score}/100\n`);

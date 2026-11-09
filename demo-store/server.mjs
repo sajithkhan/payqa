@@ -6,17 +6,19 @@
 //   BUG 2: Coupon discount is shown in the cart but PayPal is charged the full price
 //   BUG 3: A declined/failed capture still shows "Payment successful!" to the customer
 //   BUG 4: No idempotency, so retrying capture records the payment twice and reduces stock twice
+//
+// The store connects to PayQA through the PayQA Adapter (see ../adapter), mounted at /payqa.
 
 import 'dotenv/config';
 import express from 'express';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { paypalFetch } from './paypal.mjs';
+import { payqaAdapter } from '../adapter/payqa-adapter.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const PORT = process.env.STORE_PORT || 4000;
+const PORT = process.env.PORT || process.env.STORE_PORT || 4000;
 const BUGGY = process.env.BUGGY_MODE !== 'false';
-const TEST_MODE = process.env.STORE_TEST_MODE !== 'false'; // lets PayQA inject PayPal mock errors
 
 const app = express();
 app.use(express.json());
@@ -73,34 +75,15 @@ function reduceStock(lines) {
   for (const l of lines) stock[l.productId] -= l.qty;
 }
 
-// PayQA can force PayPal failures by sending this header (sandbox negative testing)
-const mockFrom = (req) => (TEST_MODE ? req.get('x-payqa-mock') || null : null);
+// ---------- Checkout logic (used by the customer API and by the PayQA adapter) ----------
+// Each returns { status, body }: exactly what the customer-facing endpoint sends.
 
-// ---------- API ----------
-app.get('/api/config', (req, res) => {
-  res.json({ clientId: process.env.PAYPAL_CLIENT_ID, buggyMode: BUGGY, testMode: TEST_MODE });
-});
-
-app.get('/api/products', (req, res) => {
-  res.json(PRODUCTS.map((p) => ({ ...p, stock: stock[p.id] })));
-});
-
-// Preview totals for the cart UI
-app.post('/api/cart/price', (req, res) => {
-  try {
-    res.json(priceCart(req.body.items, req.body.coupon));
-  } catch (e) {
-    res.status(400).json({ error: e.message });
-  }
-});
-
-// Create a PayPal order
-app.post('/api/orders', async (req, res) => {
+async function createOrder({ items, coupon } = {}) {
   let cart;
   try {
-    cart = priceCart(req.body.items, req.body.coupon);
+    cart = priceCart(items, coupon);
   } catch (e) {
-    return res.status(400).json({ error: e.message });
+    return { status: 400, body: { error: e.message } };
   }
 
   // BUG 2: the customer sees the discounted total, but PayPal is charged the subtotal
@@ -108,7 +91,6 @@ app.post('/api/orders', async (req, res) => {
 
   const r = await paypalFetch('/v2/checkout/orders', {
     method: 'POST',
-    mockCode: mockFrom(req),
     body: {
       intent: 'CAPTURE',
       purchase_units: [
@@ -120,9 +102,7 @@ app.post('/api/orders', async (req, res) => {
     },
   });
 
-  if (!r.ok) {
-    return res.status(502).json({ error: 'Could not create PayPal order', paypal: r.data });
-  }
+  if (!r.ok) return { status: 502, body: { error: 'Could not create PayPal order', paypal: r.data } };
 
   orders.set(r.data.id, {
     id: r.data.id,
@@ -137,13 +117,12 @@ app.post('/api/orders', async (req, res) => {
     createdAt: new Date().toISOString(),
   });
 
-  res.json({ id: r.data.id, expectedTotal: cart.total });
-});
+  return { status: 200, body: { id: r.data.id, expectedTotal: cart.total } };
+}
 
-// Capture a PayPal order (called after the buyer approves)
-app.post('/api/orders/:id/capture', async (req, res) => {
-  const order = orders.get(req.params.id);
-  if (!order) return res.status(404).json({ error: 'Order not found' });
+async function captureOrder(orderId) {
+  const order = orders.get(orderId);
+  if (!order) return { status: 404, body: { error: 'Order not found' } };
 
   order.captureAttempts += 1;
 
@@ -155,33 +134,30 @@ app.post('/api/orders/:id/capture', async (req, res) => {
     reduceStock(order.lines);
   } else if (order.status === 'PAID') {
     // Fixed: idempotent, a retry doesn't double-record
-    return res.json({ ok: true, status: 'PAID', message: 'Payment already completed.' });
+    return { status: 200, body: { ok: true, status: 'PAID', message: 'Payment already completed.' } };
   }
 
-  const r = await paypalFetch(`/v2/checkout/orders/${order.id}/capture`, {
-    method: 'POST',
-    mockCode: mockFrom(req),
-  });
+  const r = await paypalFetch(`/v2/checkout/orders/${order.id}/capture`, { method: 'POST' });
 
   const capture = r.data?.purchase_units?.[0]?.payments?.captures?.[0];
   const succeeded = r.ok && r.data?.status === 'COMPLETED' && capture?.status === 'COMPLETED';
 
   if (!succeeded) {
-    const reason =
-      r.data?.details?.[0]?.issue || capture?.status || r.data?.name || `HTTP ${r.status}`;
+    const reason = r.data?.details?.[0]?.issue || capture?.status || r.data?.name || `HTTP ${r.status}`;
 
     if (BUGGY) {
       // BUG 3: swallow the failure and tell the customer it worked
       order.paypalStatus = `FAILED: ${reason}`;
-      return res.json({ ok: true, status: order.status, message: 'Payment successful!' });
+      return { status: 200, body: { ok: true, status: order.status, message: 'Payment successful!' } };
     }
 
     order.status = 'PAYMENT_FAILED';
     order.paypalStatus = `FAILED: ${reason}`;
     order.failureReason = reason;
-    return res
-      .status(402)
-      .json({ ok: false, status: order.status, message: 'Payment failed. Please try another method.', reason });
+    return {
+      status: 402,
+      body: { ok: false, status: order.status, message: 'Payment failed. Please try another method.', reason },
+    };
   }
 
   if (!BUGGY) {
@@ -193,27 +169,62 @@ app.post('/api/orders/:id/capture', async (req, res) => {
   order.paypalCaptureId = capture.id;
   order.paypalCapturedAmount = Number(capture.amount.value);
 
-  res.json({ ok: true, status: 'PAID', message: 'Payment successful!' });
+  return { status: 200, body: { ok: true, status: 'PAID', message: 'Payment successful!' } };
+}
+
+function getOrder(orderId) {
+  const order = orders.get(orderId);
+  if (!order) return null;
+  return { ...order, paymentsRecorded: payments.filter((p) => p.orderId === order.id).length };
+}
+
+// ---------- Customer API (used by the shop's own front end) ----------
+app.get('/api/config', (req, res) => {
+  res.json({ clientId: process.env.PAYPAL_CLIENT_ID, buggyMode: BUGGY });
 });
 
-// ---------- Inspection endpoints used by PayQA ----------
-app.get('/api/orders', (req, res) => res.json([...orders.values()]));
-
-app.get('/api/orders/:id', (req, res) => {
-  const order = orders.get(req.params.id);
-  if (!order) return res.status(404).json({ error: 'Order not found' });
-  res.json({ ...order, paymentsRecorded: payments.filter((p) => p.orderId === order.id).length });
+app.get('/api/products', (req, res) => {
+  res.json(PRODUCTS.map((p) => ({ ...p, stock: stock[p.id] })));
 });
 
-app.get('/api/inventory', (req, res) => res.json(stock));
-
-app.post('/api/test/reset', (req, res) => {
-  if (!TEST_MODE) return res.status(403).json({ error: 'Test mode is off' });
-  resetDb();
-  res.json({ ok: true });
+app.post('/api/cart/price', (req, res) => {
+  try {
+    res.json(priceCart(req.body.items, req.body.coupon));
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
 });
+
+app.post('/api/orders', async (req, res) => {
+  const r = await createOrder(req.body);
+  res.status(r.status).json(r.body);
+});
+
+app.post('/api/orders/:id/capture', async (req, res) => {
+  const r = await captureOrder(req.params.id);
+  res.status(r.status).json(r.body);
+});
+
+// ---------- PayQA Adapter ----------
+app.use(
+  '/payqa',
+  payqaAdapter({
+    enabled: process.env.PAYQA_ENABLED !== 'false', // on by default for the demo store
+    token: process.env.PAYQA_TOKEN,
+    paypalBaseUrl: process.env.PAYPAL_BASE_URL,
+    testCoupon: 'SAVE10',
+    products: () => PRODUCTS.map((p) => ({ id: p.id, name: p.name, price: p.price })),
+    priceCart: (cart) => priceCart(cart.items, cart.coupon),
+    createOrder,
+    captureOrder,
+    getOrder,
+    inventory: () => ({ ...stock }),
+    reset: resetDb,
+  })
+);
 
 app.listen(PORT, () => {
   console.log(`🛒 PayQA Demo Store on http://localhost:${PORT}`);
   console.log(`   Buggy mode: ${BUGGY ? 'ON (4 planted bugs)' : 'OFF (fixed store)'}`);
+  console.log(`   PayQA adapter: /payqa`);
 });

@@ -22,10 +22,19 @@
   </header>
 
   <form class="controls" id="run-form">
-    <label class="field">
-      <span>Store to test</span>
-      <input id="store-url" type="url" required placeholder="http://localhost:4000" />
-    </label>
+    <div class="field-stack">
+      <label class="field">
+        <span>Store to test</span>
+        <input id="store-url" type="url" required placeholder="http://localhost:4000" />
+      </label>
+      <details class="token">
+        <summary>Store needs an access token?</summary>
+        <label class="field">
+          <span>PayQA token (the store's PAYQA_TOKEN)</span>
+          <input id="store-token" type="password" autocomplete="off" placeholder="Leave empty if the store doesn't use one" />
+        </label>
+      </details>
+    </div>
 
     <fieldset class="modes" id="modes">
       <legend>What to run</legend>
@@ -47,7 +56,8 @@
           <div><dt>Chaos</dt><dd>Makes PayPal decline cards, refuse transactions and fail mid-capture, then checks your store didn't mark anything as paid.</dd></div>
           <div><dt>Browser</dt><dd>Opens Chrome, shops like a customer, pays through the real PayPal popup, and compares what they saw with what PayPal charged.</dd></div>
         </dl>
-        <p class="hint">Pick a mode and press <b>Run tests</b>. The demo store runs at <code>http://localhost:4000</code>.</p>
+        <p class="hint">Pick a mode and press <b>Run tests</b>. The demo store runs at <code>http://localhost:4000</code>.
+          To test your own store, add the PayQA Adapter to its staging server (see <code>adapter/README.md</code>).</p>
       </div>
 
       <div id="analysis" class="analysis" hidden></div>

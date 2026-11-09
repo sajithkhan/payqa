@@ -1,5 +1,6 @@
 // Small PayPal REST helper for the demo store (sandbox only)
 import 'dotenv/config';
+import { payqaPayPalHeaders } from '../adapter/payqa-adapter.mjs';
 
 const BASE = process.env.PAYPAL_BASE_URL || 'https://api-m.sandbox.paypal.com';
 let cachedToken = null;
@@ -29,19 +30,15 @@ async function getAccessToken() {
 }
 
 /**
- * Call the PayPal REST API.
- * mockCode: optional PayPal negative-testing code, e.g. "INSTRUMENT_DECLINED".
- * Returns { ok, status, data } and never throws on API errors.
+ * Call the PayPal REST API. Returns { ok, status, data } and never throws on API errors.
  */
-export async function paypalFetch(path, { method = 'GET', body, mockCode } = {}) {
+export async function paypalFetch(path, { method = 'GET', body } = {}) {
   const token = await getAccessToken();
   const headers = {
     Authorization: `Bearer ${token}`,
     'Content-Type': 'application/json',
+    ...payqaPayPalHeaders(), // the one line a merchant adds for PayQA
   };
-  if (mockCode) {
-    headers['PayPal-Mock-Response'] = JSON.stringify({ mock_application_codes: mockCode });
-  }
 
   const res = await fetch(`${BASE}${path}`, {
     method,
