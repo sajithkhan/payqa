@@ -18,7 +18,8 @@ import { payqaAdapter } from '../adapter/payqa-adapter.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || process.env.STORE_PORT || 4000;
-const BUGGY = process.env.BUGGY_MODE !== 'false';
+// `node demo-store/server.mjs --fixed` (or BUGGY_MODE=false) runs the store without the bugs
+const BUGGY = process.env.BUGGY_MODE !== 'false' && !process.argv.includes('--fixed');
 
 const app = express();
 app.use(express.json());

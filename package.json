@@ -2,9 +2,16 @@
   "name": "payqa",
   "version": "1.0.0",
   "description": "AI-powered QA agent for PayPal checkouts. Runs happy-path and chaos tests in the PayPal sandbox, explains failures with AI, and gives a Payment Readiness Score before you go live.",
-  "main": "index.js",
+  "main": "server/index.mjs",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "setup": "npm install && npx playwright install chromium",
+    "store": "node demo-store/server.mjs",
+    "store:fixed": "node demo-store/server.mjs --fixed",
+    "example": "node examples/minimal-store/server.mjs",
+    "payqa": "node server/index.mjs",
+    "chaos": "node server/cli.mjs chaos",
+    "browser": "node server/cli.mjs browser"
   },
   "repository": {
     "type": "git",
@@ -12,7 +19,7 @@
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "type": "commonjs",
   "bugs": {
     "url": "https://github.com/sajithkhan/payqa/issues"
