@@ -9,6 +9,7 @@
 //     token: process.env.PAYQA_TOKEN,                 // optional shared secret
 //     paypalBaseUrl: process.env.PAYPAL_BASE_URL,     // must be the sandbox
 //     testCoupon: 'SAVE10',                           // optional: a coupon PayQA can use
+//     browserMode: false,                             // true only if your shop pages follow PayQA's page conventions
 //     products:     async () => [{ id, name, price }],
 //     priceCart:    async (cart) => ({ subtotal, discount, total }),
 //     createOrder:  async (cart) => ({ status, body: { id } }),        // your create-order logic
@@ -88,6 +89,7 @@ export function payqaAdapter(options = {}) {
       inventory: typeof options.inventory === 'function',
       reset: typeof options.reset === 'function',
       testCoupon: options.testCoupon || null,
+      browserMode: Boolean(options.browserMode),
     },
   })));
 

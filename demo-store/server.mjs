@@ -213,6 +213,7 @@ app.use(
     token: process.env.PAYQA_TOKEN,
     paypalBaseUrl: process.env.PAYPAL_BASE_URL,
     testCoupon: 'SAVE10',
+    browserMode: true, // the shop page uses PayQA's data-testid conventions
     products: () => PRODUCTS.map((p) => ({ id: p.id, name: p.name, price: p.price })),
     priceCart: (cart) => priceCart(cart.items, cart.coupon),
     createOrder,

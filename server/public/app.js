@@ -65,7 +65,8 @@ function renderReceipt(run) {
     footer = `<hr class="r-rule" /><p class="r-muted">Run stopped</p>`;
   } else if (run.summary) {
     const s = run.summary;
-    const ready = s.failed === 0 && s.errors === 0;
+    const tested = s.checksTotal > 0;
+    const ready = tested && s.failed === 0 && s.errors === 0;
     const landed = stampShownFor !== run.id;
     stampShownFor = run.id;
     const bugs = s.bugsFound.length
@@ -76,9 +77,11 @@ function renderReceipt(run) {
       <div class="r-line"><span class="name">Scenarios passed</span><span class="val">${s.passed}/${s.scenarios}</span></div>
       <div class="r-line"><span class="name">Checks passed</span><span class="val">${s.checksPassed}/${s.checksTotal}</span></div>
       <hr class="r-rule" />
-      <div class="r-total"><span>Readiness</span><strong>${s.score}<small>/100</small></strong></div>
+      <div class="r-total"><span>Readiness</span><strong>${tested ? s.score : '–'}<small>/100</small></strong></div>
       ${bugs}
-      <div class="stamp ${ready ? 'yes' : 'no'}${landed ? ' landed' : ''}">${ready ? 'Cleared for go-live' : 'Not ready to go live'}</div>`;
+      ${tested
+        ? `<div class="stamp ${ready ? 'yes' : 'no'}${landed ? ' landed' : ''}">${ready ? 'Cleared for go-live' : 'Not ready to go live'}</div>`
+        : '<p class="r-muted">Nothing was tested</p>'}`;
   } else {
     footer = `<hr class="r-rule" /><p class="r-muted">${run.status === 'analyzing' ? 'Totalling up…' : 'Running…'}</p>`;
   }
@@ -185,7 +188,7 @@ function renderAnalysis(run) {
     .join('');
   el.innerHTML = `
     <div class="analysis-head">
-      <h2>${a.ready ? 'Ready to go live' : 'What to fix'}</h2>
+      <h2>${a.ready ? 'Ready to go live' : a.issues.length ? 'What to fix' : 'Result'}</h2>
       ${a.source === 'preview' ? '<span class="badge">AI preview: sample explanations</span>' : '<span class="badge">Analysed by Claude</span>'}
     </div>
     <p class="analysis-summary">${esc(a.summary)}</p>
@@ -205,12 +208,16 @@ async function loadHistory() {
     <tbody>${runs
       .map((r) => {
         const s = r.summary;
-        const result = isActive(r) ? 'Running…' : r.status === 'error' ? 'Stopped' : s.failed + s.errors === 0 ? 'Cleared' : `${s.failed + s.errors} failing`;
+        const result = isActive(r) ? 'Running…'
+          : r.status === 'error' ? 'Stopped'
+          : !s.checksTotal ? 'Nothing tested'
+          : s.failed + s.errors === 0 ? 'Cleared'
+          : `${s.failed + s.errors} failing`;
         return `<tr class="row${r.id === currentRunId ? ' active' : ''}" data-id="${esc(r.id)}" tabindex="0">
           <td>${esc(fmtDate(r.createdAt))}</td>
           <td>${esc(MODE_NAMES[r.mode] || r.mode)}</td>
           <td>${esc(r.storeUrl)}</td>
-          <td>${s ? `<span class="score-chip ${scoreClass(s.score)}">${s.score}</span>` : '-'}</td>
+          <td>${s?.checksTotal ? `<span class="score-chip ${scoreClass(s.score)}">${s.score}</span>` : '-'}</td>
           <td>${esc(result)}</td></tr>`;
       })
       .join('')}</tbody></table>`;

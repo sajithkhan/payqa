@@ -93,7 +93,8 @@ export async function analyzeRun(run) {
     }));
 
   const score = run.summary?.score ?? 0;
-  const ready = issues.length === 0 && (run.summary?.errors ?? 0) === 0;
+  const tested = (run.summary?.checksTotal ?? 0) > 0;
+  const ready = tested && issues.length === 0 && (run.summary?.errors ?? 0) === 0;
   const critical = issues.filter((i) => i.severity === 'critical').length;
 
   const errors = (run.results || []).filter((r) => r.status === 'error');
@@ -102,7 +103,10 @@ export async function analyzeRun(run) {
     : '';
 
   let summary;
-  if (ready) {
+  if (!tested && !errors.length) {
+    const reason = (run.results || []).find((r) => r.skipReason)?.skipReason;
+    summary = `Nothing could be tested in this run.${reason ? ` ${reason}` : ''}`;
+  } else if (ready) {
     const skipped = run.summary?.skipped || 0;
     summary =
       `All ${run.summary?.passed ?? ''} scenarios that ran passed. The store handled every failure PayQA threw at it without marking unpaid orders as paid or charging the wrong amount.` +

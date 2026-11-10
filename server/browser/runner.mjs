@@ -21,10 +21,11 @@ export async function runBrowser({
     email: process.env.SANDBOX_BUYER_EMAIL,
     password: process.env.SANDBOX_BUYER_PASSWORD,
   };
-  if (!buyer.email || !buyer.password) {
-    throw new Error('SANDBOX_BUYER_EMAIL and SANDBOX_BUYER_PASSWORD must be set in .env');
-  }
   if (screenshotDir) fs.mkdirSync(screenshotDir, { recursive: true });
+
+  // Browser Mode drives the shop's web pages, so the store must say it supports it
+  const health = await store.health();
+  const browserReady = Boolean(health.body?.capabilities?.browserMode);
 
   const results = SCENARIOS.map((s) => ({
     id: s.id,
@@ -35,6 +36,20 @@ export async function runBrowser({
     checks: [],
   }));
   onUpdate(results);
+
+  if (!browserReady) {
+    for (const r of results) {
+      r.status = 'skipped';
+      r.skipReason = "This store doesn't support Browser Mode (no shop page PayQA can drive). Use Chaos Mode.";
+      r.durationMs = 0;
+    }
+    onUpdate(results);
+    return { results, summary: summarize(results) };
+  }
+
+  if (!buyer.email || !buyer.password) {
+    throw new Error('SANDBOX_BUYER_EMAIL and SANDBOX_BUYER_PASSWORD must be set in .env');
+  }
 
   const browser = await chromium.launch({
     headless,
