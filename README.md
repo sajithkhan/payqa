@@ -23,7 +23,7 @@ These are hard to test by hand, because you'd need PayPal to fail on demand. Pay
 |---|---|
 | **Chaos Mode** | Calls the store's real checkout code while PayPal is forced to decline, refuse or error. Checks what the customer was told, whether the order was marked paid, whether stock and payments changed, and whether the amount PayPal charges matches the cart. 7 scenarios, about 20 seconds. |
 | **Browser Mode** | Opens Chrome with Playwright, shops like a customer, logs into the real PayPal sandbox popup and pays. Checks the success message, compares the on-screen total with what PayPal charges, and tests cancelling in the popup. Takes screenshots as evidence. |
-| **AI analysis** | Explains each problem in plain language, why it matters, and the code fix. Uses Claude when an API key is set, otherwise built-in explanations. |
+| **AI analysis** | Claude explains each problem using the run's real evidence (what was expected, what actually happened), why it matters, and the code fix. PayQA decides what failed and how severe it is; Claude explains. Without an API key, or if the API is unavailable, PayQA uses built-in explanations so a run never breaks. |
 | **Readiness score** | A weighted score (critical issues count most) and a go/no-go verdict: *Cleared for go-live* or *Not ready to go live*. |
 | **PayQA Adapter** | One file that connects any Node.js + Express store to PayQA. PayQA then tests that store's real checkout code. |
 
@@ -34,7 +34,7 @@ The repo includes a demo store, "Lanka Crafts", with 4 deliberate bugs, and a fi
 | Store | Chaos | Browser | Full |
 |---|---|---|---|
 | Demo store, buggy | 14/100 | 85/100 | 38/100 |
-| Demo store, fixed (`--fixed`) | 100/100 | 100/100 | 100/100 |
+| Demo store, fixed (`npm run store:fixed`) | 100/100 | 100/100 | 100/100 |
 | Minimal example store | 100/100 (coupon test skipped) | not supported (no shop page) | 100/100 |
 
 ## How it works
@@ -95,16 +95,15 @@ copy .env.example .env        # Windows
 
 ### 4. Start
 
-In two terminals:
+In three terminals:
 
 ```bash
-npm run store       # demo store on http://localhost:4000 (with the 4 bugs)
-npm run payqa       # PayQA dashboard on http://localhost:5000
+npm run store         # demo store with the 4 bugs:  http://localhost:4000
+npm run store:fixed   # same store, bugs fixed:      http://localhost:4001
+npm run payqa         # PayQA dashboard:             http://localhost:5000
 ```
 
-Open **http://localhost:5000**, pick **Chaos**, and press **Run tests**.
-
-To see the fixed store go green, stop the store and run `npm run store:fixed`, then run the tests again.
+Open **http://localhost:5000**, click **Demo store (buggy)**, pick **Chaos**, and press **Run tests**. Then click **Demo store (fixed)** and run again to see it go green.
 
 ### Optional: the minimal example store
 
@@ -112,7 +111,7 @@ To see the fixed store go green, stop the store and run `npm run store:fixed`, t
 npm run example     # http://localhost:4100
 ```
 
-In the dashboard, test `http://localhost:4100` with the access token `minimal-store-token`.
+In the dashboard, click **Minimal store** (it fills in the URL and its access token) and run **Chaos**.
 
 ### Command line
 

@@ -7,6 +7,7 @@ import express from 'express';
 import { runMode, checkStore, MODES, SCREENSHOT_DIR } from './modes.mjs';
 import { createRun, updateRun, getRun, listRuns } from './runs.mjs';
 import { analyzeRun } from './ai/analyze.mjs';
+import { claudeConfigured } from './ai/claude.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || process.env.PAYQA_PORT || 5000;
@@ -22,7 +23,23 @@ app.use('/screenshots', express.static(SCREENSHOT_DIR));
 
 app.get('/api/health', (req, res) => res.json({ ok: true }));
 
-app.get('/api/config', (req, res) => res.json({ defaultStoreUrl: DEFAULT_STORE_URL, modes: MODES }));
+// Stores offered as one-click choices in the dashboard. Override with PAYQA_STORES (JSON) when deployed.
+const DEMO_STORES = (() => {
+  try {
+    if (process.env.PAYQA_STORES) return JSON.parse(process.env.PAYQA_STORES);
+  } catch {
+    console.warn('⚠️  PAYQA_STORES is not valid JSON, using the local demo stores');
+  }
+  return [
+    { label: 'Demo store (buggy)', url: 'http://localhost:4000' },
+    { label: 'Demo store (fixed)', url: 'http://localhost:4001' },
+    { label: 'Minimal store', url: 'http://localhost:4100', token: 'minimal-store-token' },
+  ];
+})();
+
+app.get('/api/config', (req, res) =>
+  res.json({ defaultStoreUrl: DEFAULT_STORE_URL, modes: MODES, stores: DEMO_STORES, ai: claudeConfigured() ? 'claude' : 'built-in' })
+);
 
 // POST so a store token never ends up in a URL or log
 app.post('/api/store-check', async (req, res) => {
@@ -62,4 +79,5 @@ app.get('/api/runs/:id', (req, res) => {
 app.listen(PORT, () => {
   console.log(`🛡️  PayQA dashboard on http://localhost:${PORT}`);
   console.log(`   Default store under test: ${DEFAULT_STORE_URL}`);
+  console.log(`   AI analysis: ${claudeConfigured() ? 'Claude' : 'built-in explanations (no ANTHROPIC_API_KEY)'}`);
 });

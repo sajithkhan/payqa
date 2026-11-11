@@ -60,6 +60,18 @@ button, input { font: inherit; color: inherit; }
 }
 .field { display: grid; gap: 6px; }
 .field-stack { display: grid; gap: 8px; align-self: start; }
+.quick-picks { display: flex; gap: 6px; flex-wrap: wrap; }
+.quick-picks button {
+  padding: 4px 10px;
+  border: 1px solid var(--line);
+  border-radius: 99px;
+  background: var(--slate);
+  font-size: 13px;
+  cursor: pointer;
+}
+.quick-picks button:hover { border-color: var(--ink-soft); }
+.quick-picks button[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: #fff; }
+.badge.ai { background: #e4ecfa; color: #1f4b99; }
 .token summary { font-size: 13px; color: var(--ink-soft); cursor: pointer; width: fit-content; }
 .token[open] summary { margin-bottom: 8px; }
 .dot.skipped { background: var(--slate-deep); color: var(--ink-soft); }

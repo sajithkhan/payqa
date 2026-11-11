@@ -189,7 +189,8 @@ function renderAnalysis(run) {
   el.innerHTML = `
     <div class="analysis-head">
       <h2>${a.ready ? 'Ready to go live' : a.issues.length ? 'What to fix' : 'Result'}</h2>
-      ${a.source === 'preview' ? '<span class="badge">AI preview: sample explanations</span>' : '<span class="badge">Analysed by Claude</span>'}
+      ${a.source === 'claude' ? '<span class="badge ai">Analysed by Claude</span>'
+        : a.source === 'preview' ? '<span class="badge">Built-in explanations</span>' : ''}
     </div>
     <p class="analysis-summary">${esc(a.summary)}</p>
     ${issues}`;
@@ -308,10 +309,36 @@ $('run-form').addEventListener('submit', async (e) => {
   poll(data.id);
 });
 
+// ---------- quick-pick stores ----------
+function renderQuickPicks(stores) {
+  const box = $('quick-picks');
+  box.innerHTML = stores
+    .map((st, i) => `<button type="button" data-i="${i}" aria-pressed="false">${esc(st.label)}</button>`)
+    .join('');
+  const sync = () => {
+    for (const b of box.querySelectorAll('button')) {
+      b.setAttribute('aria-pressed', String(stores[b.dataset.i].url === $('store-url').value.trim()));
+    }
+  };
+  box.addEventListener('click', (e) => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    const st = stores[b.dataset.i];
+    $('store-url').value = st.url;
+    $('store-token').value = st.token || '';
+    document.querySelector('.token').open = Boolean(st.token);
+    showError('');
+    sync();
+  });
+  $('store-url').addEventListener('input', sync);
+  sync();
+}
+
 // ---------- start ----------
 (async function init() {
   const config = await fetch('/api/config').then((r) => r.json());
   $('store-url').value = config.defaultStoreUrl;
+  renderQuickPicks(config.stores || []);
   const runs = await loadHistory();
   const active = runs.find(isActive);
   if (active) showRun(active.id);

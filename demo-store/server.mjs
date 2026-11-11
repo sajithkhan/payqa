@@ -17,9 +17,10 @@ import { paypalFetch } from './paypal.mjs';
 import { payqaAdapter } from '../adapter/payqa-adapter.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const PORT = process.env.PORT || process.env.STORE_PORT || 4000;
-// `node demo-store/server.mjs --fixed` (or BUGGY_MODE=false) runs the store without the bugs
+// `node demo-store/server.mjs --fixed` (or BUGGY_MODE=false) runs the store without the bugs,
+// on port 4001 by default so the buggy (4000) and fixed stores can run side by side
 const BUGGY = process.env.BUGGY_MODE !== 'false' && !process.argv.includes('--fixed');
+const PORT = process.env.PORT || process.env.STORE_PORT || (BUGGY ? 4000 : 4001);
 
 const app = express();
 app.use(express.json());

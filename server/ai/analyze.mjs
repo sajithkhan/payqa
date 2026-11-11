@@ -1,6 +1,9 @@
-// AI analysis of a finished run.
-// For now this returns PREVIEW text from templates. On Tuesday, analyzeRun() will call Claude
-// with the run's failed checks and evidence, and return the same shape.
+// Analysis of a finished run.
+// builtInAnalysis() groups failed checks into issues and explains them with built-in text.
+// analyzeRun() then asks Claude (if ANTHROPIC_API_KEY is set) to explain this specific run,
+// and falls back to the built-in text if Claude isn't available.
+
+import { explainWithClaude, claudeConfigured } from './claude.mjs';
 
 const ISSUES = {
   'amount-mismatch': {
@@ -65,7 +68,7 @@ if (r.status === 'COMPLETED') {
 
 const RANK = { critical: 3, high: 2, medium: 1, low: 0 };
 
-export async function analyzeRun(run) {
+function builtInAnalysis(run) {
   const failed = (run.results || []).flatMap((r) =>
     r.checks.filter((c) => !c.passed).map((c) => ({ ...c, scenarioId: r.id, scenarioTitle: r.title }))
   );
@@ -120,5 +123,38 @@ export async function analyzeRun(run) {
     summary = `No problems found in the scenarios that finished.${errorNote}`;
   }
 
-  return { source: 'preview', ready, score, summary, issues };
+  return { source: issues.length ? 'preview' : 'none', ready, score, summary, issues, failed };
+}
+
+export async function analyzeRun(run) {
+  const base = builtInAnalysis(run);
+  const { failed, ...analysis } = base;
+
+  // Nothing to explain, or no key: use the built-in analysis
+  if (!analysis.issues.length || !claudeConfigured()) return analysis;
+
+  try {
+    const ai = await explainWithClaude({ run, issues: analysis.issues, failedChecks: failed, builtInSummary: analysis.summary });
+    const byBug = new Map(ai.issues.map((i) => [i.bug, i]));
+    return {
+      ...analysis,
+      source: 'claude',
+      model: ai.model,
+      summary: ai.summary || analysis.summary,
+      issues: analysis.issues.map((issue) => {
+        const x = byBug.get(issue.bug);
+        if (!x) return issue;
+        return {
+          ...issue, // severity and scenarios always come from PayQA, not the AI
+          title: x.title || issue.title,
+          explanation: x.explanation || issue.explanation,
+          impact: x.impact || issue.impact,
+          fix: x.fix || issue.fix,
+        };
+      }),
+    };
+  } catch (err) {
+    console.warn(`⚠️  Claude analysis failed, using built-in explanations: ${err.message}`);
+    return { ...analysis, aiError: err.message };
+  }
 }
