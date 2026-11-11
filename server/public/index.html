@@ -50,6 +50,9 @@
 
   <main class="layout">
     <section class="results" aria-live="polite">
+      <div class="results-bar" id="results-bar" hidden>
+        <button type="button" class="clear-btn" id="clear-btn">Clear results</button>
+      </div>
       <div id="empty" class="empty">
         <h2>Test a checkout before it takes real money</h2>
         <p>PayQA runs your store against the PayPal sandbox and checks what happens when payments go wrong.</p>
@@ -57,7 +60,7 @@
           <div><dt>Chaos</dt><dd>Makes PayPal decline cards, refuse transactions and fail mid-capture, then checks your store didn't mark anything as paid.</dd></div>
           <div><dt>Browser</dt><dd>Opens Chrome, shops like a customer, pays through the real PayPal popup, and compares what they saw with what PayPal charged.</dd></div>
         </dl>
-        <p class="hint">Pick a mode and press <b>Run tests</b>. The demo store runs at <code>http://localhost:4000</code>.
+        <p class="hint">Pick a store above (or enter its URL), choose a mode and press <b>Run tests</b>.
           To test your own store, add the PayQA Adapter to its staging server (see <code>adapter/README.md</code>).</p>
       </div>
 
@@ -75,10 +78,10 @@
     </aside>
   </main>
 
-  <section class="history">
-    <h2>Past runs</h2>
+  <details class="history" id="history-panel">
+    <summary><h2>Past runs <span id="history-count"></span></h2></summary>
     <div id="history"><p class="r-muted">No runs yet.</p></div>
-  </section>
+  </details>
 
   <script src="/app.js"></script>
 </body>

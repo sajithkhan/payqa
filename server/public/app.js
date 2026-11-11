@@ -200,6 +200,7 @@ function renderAnalysis(run) {
 // ---------- history ----------
 async function loadHistory() {
   const runs = await fetch('/api/runs').then((r) => r.json());
+  $('history-count').textContent = runs.length ? `(${runs.length})` : '';
   if (!runs.length) {
     $('history').innerHTML = '<p class="r-muted" style="text-align:left">No runs yet.</p>';
     return runs;
@@ -227,19 +228,26 @@ async function loadHistory() {
 
 $('history').addEventListener('click', (e) => {
   const row = e.target.closest('tr.row');
-  if (row) showRun(row.dataset.id);
+  if (row) {
+    showRun(row.dataset.id);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
 });
 $('history').addEventListener('keydown', (e) => {
   const row = e.target.closest('tr.row');
   if (row && (e.key === 'Enter' || e.key === ' ')) {
     e.preventDefault();
     showRun(row.dataset.id);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 });
 
 // ---------- run lifecycle ----------
 function render(run) {
   $('empty').hidden = Boolean(run);
+  $('results-bar').hidden = !run;
+  $('clear-btn').disabled = isActive(run);
+  $('clear-btn').title = isActive(run) ? 'Wait for the run to finish' : '';
   renderReceipt(run);
   renderScenarios(run);
   renderAnalysis(run);
@@ -334,14 +342,25 @@ function renderQuickPicks(stores) {
   sync();
 }
 
+// ---------- clear ----------
+function clearResults() {
+  clearTimeout(pollTimer);
+  currentRunId = null;
+  openScenarios.clear();
+  showError('');
+  render(null);
+  loadHistory();
+}
+$('clear-btn').addEventListener('click', clearResults);
+
 // ---------- start ----------
 (async function init() {
   const config = await fetch('/api/config').then((r) => r.json());
   $('store-url').value = config.defaultStoreUrl;
   renderQuickPicks(config.stores || []);
+  // Every visit starts fresh. Only a run that's still in progress is picked up again.
   const runs = await loadHistory();
   const active = runs.find(isActive);
   if (active) showRun(active.id);
-  else if (runs[0]) showRun(runs[0].id);
   else render(null);
 })();

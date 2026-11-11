@@ -268,8 +268,38 @@ button, input { font: inherit; color: inherit; }
 .r-bugs li::before { content: '- '; }
 
 /* ---------- history ---------- */
-.history { padding: 0 clamp(16px, 4vw, 48px) 48px; }
-.history h2 { font-size: 18px; margin-bottom: 10px; }
+.history { margin: 0 clamp(16px, 4vw, 48px) 48px; }
+.history summary {
+  list-style: none;
+  cursor: pointer;
+  width: fit-content;
+  padding: 6px 0;
+}
+.history summary::-webkit-details-marker { display: none; }
+.history summary h2 { font-size: 18px; display: inline-flex; align-items: center; gap: 8px; }
+.history summary h2::before {
+  content: '';
+  width: 8px; height: 8px;
+  border-right: 2px solid var(--ink); border-bottom: 2px solid var(--ink);
+  transform: rotate(-45deg);
+  transition: transform 0.15s;
+}
+.history[open] summary h2::before { transform: rotate(45deg); }
+.history[open] summary { margin-bottom: 10px; }
+#history-count { font-size: 15px; font-weight: 500; color: var(--ink-soft); }
+.results-bar { display: flex; justify-content: flex-end; margin-bottom: 12px; }
+.results-bar[hidden] { display: none; }
+.clear-btn {
+  padding: 7px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.clear-btn:hover { border-color: var(--ink-soft); }
+.clear-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .history table { width: 100%; border-collapse: collapse; background: var(--paper); border-radius: 10px; overflow: hidden; font-size: 15px; }
 .history th, .history td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--slate); }
 .history th { font-size: 13px; color: var(--ink-soft); font-weight: 600; }
@@ -287,7 +317,7 @@ button, input { font: inherit; color: inherit; }
   .modes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .modes label span { min-width: 0; padding: 8px 10px; }
   .layout { grid-template-columns: minmax(0, 1fr); }
-  .history { overflow-x: auto; }
+  #history { overflow-x: auto; }
   .receipt-col { position: static; order: -1; }
   .ea { grid-template-columns: 1fr; }
   .s-body { padding-left: 16px; }
