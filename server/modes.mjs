@@ -14,7 +14,7 @@ export const MODES = ['chaos', 'browser', 'full'];
 export async function checkStore(storeUrl, storeToken) {
   let res;
   try {
-    res = await createStoreClient(storeUrl, { token: storeToken }).health();
+    res = await createStoreClient(storeUrl, { token: storeToken, timeoutMs: 90_000 }).health();
   } catch (err) {
     return { ok: false, error: `Can't reach the store at ${storeUrl}. Check it's running (${err.cause?.code || err.message}).` };
   }

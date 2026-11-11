@@ -111,6 +111,16 @@ button, input { font: inherit; color: inherit; }
 }
 .run-btn:hover { background: #22395b; }
 .run-btn:disabled { background: var(--ink-soft); cursor: progress; }
+.form-note {
+  margin: 10px clamp(16px, 4vw, 48px) 0;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: #e4ecfa;
+  color: #1f4b99;
+  font-weight: 600;
+}
+.modes label.off { cursor: not-allowed; opacity: 0.55; }
+.field input[readonly] { color: var(--ink-soft); }
 .form-error {
   margin: 10px clamp(16px, 4vw, 48px) 0;
   padding: 10px 14px;

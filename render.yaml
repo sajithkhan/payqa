@@ -1,0 +1,63 @@
+# Render Blueprint: deploys the PayQA dashboard and the two demo stores (buggy + fixed).
+# Render Dashboard → New → Blueprint → connect this repo. See DEPLOY.md.
+
+envVarGroups:
+  - name: payqa-paypal
+    envVars:
+      - key: PAYPAL_CLIENT_ID
+        sync: false
+      - key: PAYPAL_CLIENT_SECRET
+        sync: false
+      - key: PAYPAL_BASE_URL
+        value: https://api-m.sandbox.paypal.com
+      - key: NODE_VERSION
+        value: "22"
+
+services:
+  # PayQA dashboard + engine
+  - type: web
+    name: payqa
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node server/index.mjs
+    healthCheckPath: /api/health
+    envVars:
+      - fromGroup: payqa-paypal
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      # Public URLs of the two stores below. If Render gives them different
+      # names (e.g. with a suffix), update these two values after the first deploy.
+      - key: PAYQA_BUGGY_STORE_URL
+        value: https://payqa-store-buggy.onrender.com
+      - key: PAYQA_FIXED_STORE_URL
+        value: https://payqa-store-fixed.onrender.com
+      # Hosted-demo guard rails
+      - key: PAYQA_BROWSER_MODE
+        value: "off"
+      - key: PAYQA_LOCK_STORES
+        value: "true"
+      - key: PAYQA_MAX_RUNS_PER_HOUR
+        value: "30"
+
+  # Demo store with the 4 planted bugs
+  - type: web
+    name: payqa-store-buggy
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node demo-store/server.mjs
+    healthCheckPath: /payqa/health
+    envVars:
+      - fromGroup: payqa-paypal
+
+  # The same store with the bugs fixed
+  - type: web
+    name: payqa-store-fixed
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node demo-store/server.mjs --fixed
+    healthCheckPath: /payqa/health
+    envVars:
+      - fromGroup: payqa-paypal

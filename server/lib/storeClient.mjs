@@ -1,7 +1,7 @@
 // Talks to the store under test through the PayQA Adapter (mounted at <store>/payqa).
 // Never throws on HTTP errors: returns { status, ok, body } so checks can inspect them.
 
-export function createStoreClient(baseUrl, { token } = {}) {
+export function createStoreClient(baseUrl, { token, timeoutMs = 45_000 } = {}) {
   const base = baseUrl.replace(/\/$/, '');
   const api = `${base}/payqa`;
 
@@ -14,7 +14,7 @@ export function createStoreClient(baseUrl, { token } = {}) {
         ...headers,
       },
       body: body ? JSON.stringify(body) : undefined,
-      signal: AbortSignal.timeout(45_000),
+      signal: AbortSignal.timeout(timeoutMs),
     });
     let data = null;
     try {

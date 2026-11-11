@@ -29,6 +29,12 @@ const fmtDate = (iso) =>
 const scoreClass = (s) => (s >= 90 ? 'high' : s >= 60 ? 'mid' : 'low');
 const isActive = (run) => run && (run.status === 'running' || run.status === 'analyzing');
 
+function showNote(msg) {
+  const el = $('form-note');
+  el.textContent = msg || '';
+  el.hidden = !msg;
+}
+
 function showError(msg) {
   const el = $('form-error');
   el.textContent = msg || '';
@@ -289,14 +295,20 @@ $('run-form').addEventListener('submit', async (e) => {
   const mode = new FormData(e.target).get('mode');
 
   $('run-btn').disabled = true;
+  $('run-btn').textContent = 'Checking store…';
+  // a sleeping free-tier store can take up to a minute to wake up
+  const slow = setTimeout(() => showNote('Waking up the store. On free hosting this can take up to a minute…'), 4000);
   const check = await fetch('/api/store-check', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ storeUrl, storeToken }),
-  }).then((r) => r.json());
+  }).then((r) => r.json()).catch(() => ({ ok: false, error: 'Lost connection to PayQA. Refresh the page and try again.' }));
+  clearTimeout(slow);
+  showNote('');
   if (!check.ok) {
     showError(check.error);
     $('run-btn').disabled = false;
+    $('run-btn').textContent = 'Run tests';
     return;
   }
 
@@ -309,6 +321,7 @@ $('run-form').addEventListener('submit', async (e) => {
   if (!res.ok) {
     showError(data.error);
     $('run-btn').disabled = false;
+    $('run-btn').textContent = 'Run tests';
     return;
   }
   openScenarios.clear();
@@ -358,6 +371,21 @@ $('clear-btn').addEventListener('click', clearResults);
   const config = await fetch('/api/config').then((r) => r.json());
   $('store-url').value = config.defaultStoreUrl;
   renderQuickPicks(config.stores || []);
+  fetch('/api/warmup', { method: 'POST' }).catch(() => {}); // start waking sleeping demo stores
+
+  // Hosted demo: Browser Mode needs a full Chrome, so it's local only
+  if (config.browserMode === false) {
+    for (const input of document.querySelectorAll('input[name=mode]')) {
+      if (input.value === 'chaos') continue;
+      input.disabled = true;
+      input.closest('label').classList.add('off');
+      input.closest('label').querySelector('small').textContent = 'Runs locally only';
+    }
+  }
+  if (config.lockedStores) {
+    $('store-url').readOnly = true;
+    document.querySelector('.token').hidden = true;
+  }
   // Every visit starts fresh. Only a run that's still in progress is picked up again.
   const runs = await loadHistory();
   const active = runs.find(isActive);
