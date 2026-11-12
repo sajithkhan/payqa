@@ -195,7 +195,7 @@ function renderAnalysis(run) {
   el.innerHTML = `
     <div class="analysis-head">
       <h2>${a.ready ? 'Ready to go live' : a.issues.length ? 'What to fix' : 'Result'}</h2>
-      ${a.source === 'claude' ? '<span class="badge ai">Analysed by Claude</span>'
+      ${a.source === 'claude' ? '<span class="badge ai">PayQA AI · powered by Claude</span>'
         : a.source === 'preview' ? '<span class="badge">Built-in explanations</span>' : ''}
     </div>
     <p class="analysis-summary">${esc(a.summary)}</p>
