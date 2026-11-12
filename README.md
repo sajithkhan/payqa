@@ -1,8 +1,12 @@
 # PayQA
 
 **Break your PayPal checkout before your customers do.**
-**Live demo:** https://payqa.onrender.com — click **Demo store (buggy)**, then **Run tests**. Then try **Demo store (fixed)**.
-The demo runs on free hosting, so the first run after a quiet spell can take about a minute while the stores wake up. The live demo runs Chaos Mode; Browser Mode needs a full Chrome and runs locally (see below).
+
+> **Try the live demo:** the demo runs on free hosting, so the services sleep when idle.
+> 1. Open the [buggy store](https://payqa-store-buggy.onrender.com) and [fixed store](https://payqa-store-fixed.onrender.com) in new tabs and wait until each shop loads (up to a minute).
+> 2. Then open **https://payqa.onrender.com**, click **Demo store (buggy)**, then **Run tests**. Then try **Demo store (fixed)**.
+>
+> If you see an "HTTP 502" message, a store is still asleep: open its link, wait for it to load, and run again. The live demo runs Chaos Mode; Browser Mode needs a full Chrome and runs locally (see below).
 
 PayQA tests a store's PayPal checkout before it goes live. It makes PayPal decline cards, refuse transactions and fail mid-payment, walks through checkout like a real customer, and checks what the store actually did. Then it explains every problem, shows the fix, and gives the checkout a Payment Readiness Score.
 
