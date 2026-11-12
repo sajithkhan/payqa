@@ -12,11 +12,17 @@ export const MODES = ['chaos', 'browser', 'full'];
 
 // Fail fast with a clear message if the store or its PayQA adapter isn't reachable
 export async function checkStore(storeUrl, storeToken) {
+  // Free hosts (Render) answer 502/503/504 while a sleeping store wakes up, so keep trying for ~90 s.
+  const deadline = Date.now() + 90_000;
   let res;
-  try {
-    res = await createStoreClient(storeUrl, { token: storeToken, timeoutMs: 90_000 }).health();
-  } catch (err) {
-    return { ok: false, error: `Can't reach the store at ${storeUrl}. Check it's running (${err.cause?.code || err.message}).` };
+  while (true) {
+    try {
+      res = await createStoreClient(storeUrl, { token: storeToken, timeoutMs: 90_000 }).health();
+    } catch (err) {
+      return { ok: false, error: `Can't reach the store at ${storeUrl}. Check it's running (${err.cause?.code || err.message}).` };
+    }
+    if (![502, 503, 504].includes(res.status) || Date.now() > deadline) break;
+    await new Promise((r) => setTimeout(r, 3000));
   }
   if (res.ok) return { ok: true, capabilities: res.body?.capabilities || {} };
   if (res.status === 401) return { ok: false, error: 'The store rejected PayQA. Check the store token.' };
